@@ -1,4 +1,6 @@
+using NUnit.Framework;
 using System.Collections;
+using System.Collections.Generic;
 using Unity.Mathematics;
 using UnityEngine;
 
@@ -8,6 +10,10 @@ public class RopeConnect : MonoBehaviour
     private SpringJoint2D springJoint;
     private bool clickedAnchored = false;
     private bool canClickTwice = false;
+    List<LineRenderer> ropes = new List<LineRenderer>();
+    List<Vector3> ropePositions = new List<Vector3>();
+    List<Vector3> ropeEndPositions = new List<Vector3>();
+
     // Start is called once before the first execution of Update after the MonoBehaviour is created
     void Start()
     {
@@ -19,10 +25,12 @@ public class RopeConnect : MonoBehaviour
     {
         CheckClick();
         Click2();
-
+        UpdateTethers();
 
     }
 
+    /* CLICK DETECTION
+     */
     void CheckClick()
     {
         if (Input.GetMouseButtonDown(0)) { 
@@ -34,7 +42,16 @@ public class RopeConnect : MonoBehaviour
             {
                 clickedFirst = hit.collider.gameObject;
                 springJoint = clickedFirst.GetComponent<SpringJoint2D>();
+                LineRenderer line = clickedFirst.AddComponent<LineRenderer>();
+                if (line)
+                {
+line.positionCount = 2;
+                line.useWorldSpace = true;
 
+                ropes.Add(line);
+                ropePositions.Add(hit.point);
+                }
+                
 
                 springJoint.anchor = hit.point - (Vector2)clickedFirst.transform.position;
 
@@ -66,7 +83,7 @@ public class RopeConnect : MonoBehaviour
                 {
                     springJoint.connectedAnchor = hit2.point;
                 }
-
+                ropeEndPositions.Add(hit2.point);
                 springJoint.enabled = true;
                 canClickTwice = false;
             }
@@ -78,5 +95,23 @@ public class RopeConnect : MonoBehaviour
     {
         yield return new WaitForSeconds(0.2f);
         canClickTwice = true;
+    }
+
+    /* LINE RENDERERS
+     */
+
+    private void UpdateTethers()
+    {
+        if (ropes.Count > 0 && ropePositions.Count > 0 && ropeEndPositions.Count > 0)
+        {
+            for (int i = 0; i < ropes.Count; i++)
+            {
+                if (ropes[i] != null && ropePositions[i] != null && ropeEndPositions[i] != null)
+                {
+                    ropes[i].SetPosition(0, ropePositions[i]);
+                    ropes[i].SetPosition(1, ropeEndPositions[i]);
+                }
+            }
+        }
     }
 }

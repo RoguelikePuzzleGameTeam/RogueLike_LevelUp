@@ -11,8 +11,10 @@ public class RopeConnect : MonoBehaviour
     private bool clickedAnchored = false;
     private bool canClickTwice = false;
     List<LineRenderer> ropes = new List<LineRenderer>();
-    List<Vector3> ropePositions = new List<Vector3>();
-    List<Vector3> ropeEndPositions = new List<Vector3>();
+    List<Transform> ropePositions = new List<Transform>();
+    List<Transform> ropeEndPositions = new List<Transform>();
+    [SerializeField] private LineRenderer line;
+    [SerializeField] private GameObject ropeAnchorPoint;
 
     // Start is called once before the first execution of Update after the MonoBehaviour is created
     void Start()
@@ -42,18 +44,13 @@ public class RopeConnect : MonoBehaviour
             {
                 clickedFirst = hit.collider.gameObject;
                 springJoint = clickedFirst.GetComponent<SpringJoint2D>();
-                LineRenderer line = clickedFirst.AddComponent<LineRenderer>();
-                if (line)
-                {
-line.positionCount = 2;
+                line = Instantiate(line, clickedFirst.transform);
                 line.useWorldSpace = true;
-
                 ropes.Add(line);
-                ropePositions.Add(hit.point);
-                }
-                
-
+                var newAnchorPoint = Instantiate(ropeAnchorPoint, clickedFirst.transform);
+                ropeAnchorPoint.transform.position = transform.TransformPoint(springJoint.anchor);
                 springJoint.anchor = hit.point - (Vector2)clickedFirst.transform.position;
+                ropePositions.Add(ropeAnchorPoint.transform);
 
                 clickedAnchored = true;
                 StartCoroutine(ClickCooldown());
@@ -78,12 +75,18 @@ line.positionCount = 2;
                 if (hit2.collider.gameObject.GetComponent<Rigidbody2D>() != null)
                 {
                     springJoint.connectedBody = hit2.collider.gameObject.GetComponent<Rigidbody2D>();
+                    var newAnchorPoint = Instantiate(ropeAnchorPoint, hit2.transform);
+                    ropeAnchorPoint.transform.position = springJoint.connectedBody.transform.TransformPoint(springJoint.connectedAnchor);
+                    ropeEndPositions.Add(newAnchorPoint.transform);
                 }
                 else
                 {
                     springJoint.connectedAnchor = hit2.point;
+                    var newAnchorPoint = Instantiate(ropeAnchorPoint, hit2.transform);
+                    ropeAnchorPoint.transform.position = transform.TransformPoint(springJoint.connectedAnchor);
+                    ropeEndPositions.Add(newAnchorPoint.transform);
                 }
-                ropeEndPositions.Add(hit2.point);
+              
                 springJoint.enabled = true;
                 canClickTwice = false;
             }
@@ -102,14 +105,15 @@ line.positionCount = 2;
 
     private void UpdateTethers()
     {
-        if (ropes.Count > 0 && ropePositions.Count > 0 && ropeEndPositions.Count > 0)
+        if (ropes.Count > 0 && ropePositions.Count > 0 && ropeEndPositions.Count > 0 && ropeEndPositions.Count == ropes.Count)
         {
             for (int i = 0; i < ropes.Count; i++)
             {
                 if (ropes[i] != null && ropePositions[i] != null && ropeEndPositions[i] != null)
                 {
-                    ropes[i].SetPosition(0, ropePositions[i]);
-                    ropes[i].SetPosition(1, ropeEndPositions[i]);
+                    Debug.Log("Log");
+                    ropes[i].SetPosition(0, ropePositions[i].position);
+                    ropes[i].SetPosition(1, ropeEndPositions[i].position);
                 }
             }
         }

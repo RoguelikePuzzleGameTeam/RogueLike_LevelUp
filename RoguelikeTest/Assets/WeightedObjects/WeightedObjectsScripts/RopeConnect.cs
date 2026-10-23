@@ -7,14 +7,39 @@ using UnityEngine;
 public class RopeConnect : MonoBehaviour
 {
     Camera cam;
+
+    private DistanceJoint2D distanceJoint;
     private SpringJoint2D springJoint;
+
     private bool clickedAnchored = false;
     private bool canClickTwice = false;
     List<LineRenderer> ropes = new List<LineRenderer>();
     List<Transform> ropePositions = new List<Transform>();
     List<Transform> ropeEndPositions = new List<Transform>();
+
+    [Header("Used Objects")]
     [SerializeField] private LineRenderer line;
     [SerializeField] private GameObject ropeAnchorPoint;
+
+    [Header("Distance Joint Settings")]
+    public float dampening = 1f;
+    public float distance = 5f;
+    public float frequency = 1f;
+
+    public bool autoConfigureDistance = false;
+    public bool maxDistanceOnly = true;
+
+
+
+    /*
+     * 
+     *  TO DO: Make the clicking create both the anchor points for the spring joint and distance joint. When the object is within the proper distance have the distance joint enabled.
+     *  when the object is outside of the distance joint range, have the spring joint enabled to pull the object back into range. Make sure to give the spring joint a low frequency
+     *  to make sure it does not pull too hard. Give the switching distance a bit of leeway so that it does not switch back and forth between the two joints too quickly. The two joints
+     *  should never be enabled at the same time.
+     * 
+     */
+
 
     // Start is called once before the first execution of Update after the MonoBehaviour is created
     void Start()
@@ -28,6 +53,10 @@ public class RopeConnect : MonoBehaviour
         CheckClick();
         Click2();
         UpdateTethers();
+
+        double distance = Vector2.Distance(distanceJoint.transform.TransformPoint(distanceJoint.anchor), distanceJoint.connectedAnchor);
+
+        Debug.Log("Distance: " + distance);
 
     }
 
@@ -44,12 +73,23 @@ public class RopeConnect : MonoBehaviour
             {
                 //find the clicked object and add a spring joint to it
                 clickedFirst = hit.collider.gameObject;
+                distanceJoint = clickedFirst.AddComponent<DistanceJoint2D>();
+
+                // create a spring joint to the clicked object to allow the object to get pulled in with more fluid physics
                 springJoint = clickedFirst.AddComponent<SpringJoint2D>();
+
+                // disable both joints until the second click is made
+                distanceJoint.enabled = false;
                 springJoint.enabled = false;
 
-                springJoint.autoConfigureDistance = false;
-                springJoint.enableCollision = true;
+                //Configure the distance joint settings
+                distanceJoint.autoConfigureDistance = autoConfigureDistance;
+                distanceJoint.enableCollision = true;
+                distanceJoint.distance = distance;
+                distanceJoint.maxDistanceOnly = maxDistanceOnly;
 
+
+                //Create the line
                 line = Instantiate(line, clickedFirst.transform);
                 line.useWorldSpace = true;
                 ropes.Add(line);
@@ -62,7 +102,7 @@ public class RopeConnect : MonoBehaviour
                 newAnchorPoint.transform.parent = clickedFirst.transform;
 
                 // Set the anchor of the spring joint to the hit point relative to the clicked object's position
-                springJoint.anchor = hit.point - (Vector2)clickedFirst.transform.position;
+                distanceJoint.anchor = hit.point - (Vector2)clickedFirst.transform.position;
                 ropePositions.Add(newAnchorPoint.transform);
 
                 // Check if they clicked before allowing them to click again
@@ -80,7 +120,7 @@ public class RopeConnect : MonoBehaviour
 
         Vector2 mousePos = cam.ScreenToWorldPoint(Input.mousePosition);
 
-        if (springJoint != null && clickedAnchored && Input.GetMouseButtonDown(0) && canClickTwice)
+        if (distanceJoint != null && clickedAnchored && Input.GetMouseButtonDown(0) && canClickTwice)
         {
 
             RaycastHit2D hit2 = Physics2D.Raycast(mousePos, Vector2.zero, Mathf.Infinity);
@@ -89,20 +129,20 @@ public class RopeConnect : MonoBehaviour
             {
                 if (hit2.collider.gameObject.GetComponent<Rigidbody2D>() != null)
                 {
-                    springJoint.connectedBody = hit2.collider.gameObject.GetComponent<Rigidbody2D>();
+                    distanceJoint.connectedBody = hit2.collider.gameObject.GetComponent<Rigidbody2D>();
                     var newAnchorPoint = Instantiate(ropeAnchorPoint, hit2.transform);
-                    newAnchorPoint.transform.position = springJoint.connectedBody.transform.TransformPoint(springJoint.connectedAnchor);
+                    newAnchorPoint.transform.position = distanceJoint.connectedBody.transform.TransformPoint(distanceJoint.connectedAnchor);
                     ropeEndPositions.Add(newAnchorPoint.transform);
                 }
                 else
                 {
-                    springJoint.connectedAnchor = hit2.point;
+                    distanceJoint.connectedAnchor = hit2.point;
                     var newAnchorPoint = Instantiate(ropeAnchorPoint, hit2.transform);
-                    newAnchorPoint.transform.position = transform.TransformPoint(springJoint.connectedAnchor);
+                    newAnchorPoint.transform.position = hit2.point;
                     ropeEndPositions.Add(newAnchorPoint.transform);
                 }
               
-                springJoint.enabled = true;
+                distanceJoint.enabled = true;
                 canClickTwice = false;
             }
 

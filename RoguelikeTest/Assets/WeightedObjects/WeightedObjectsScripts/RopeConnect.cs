@@ -42,16 +42,30 @@ public class RopeConnect : MonoBehaviour
 
             if (hit && hit.collider.gameObject.CompareTag("CanBeTied") && !canClickTwice)
             {
+                //find the clicked object and add a spring joint to it
                 clickedFirst = hit.collider.gameObject;
-                springJoint = clickedFirst.GetComponent<SpringJoint2D>();
+                springJoint = clickedFirst.AddComponent<SpringJoint2D>();
+                springJoint.enabled = false;
+
+                springJoint.autoConfigureDistance = false;
+                springJoint.enableCollision = true;
+
                 line = Instantiate(line, clickedFirst.transform);
                 line.useWorldSpace = true;
                 ropes.Add(line);
-                var newAnchorPoint = Instantiate(ropeAnchorPoint, clickedFirst.transform);
-                ropeAnchorPoint.transform.position = transform.TransformPoint(springJoint.anchor);
-                springJoint.anchor = hit.point - (Vector2)clickedFirst.transform.position;
-                ropePositions.Add(ropeAnchorPoint.transform);
 
+                //create a new anchor point at the hit point and set it as the anchor for the spring joint
+                var newAnchorPoint = Instantiate(ropeAnchorPoint);
+                newAnchorPoint.transform.position = hit.point;
+
+                // Set the parent of the new anchor point to the clicked object
+                newAnchorPoint.transform.parent = clickedFirst.transform;
+
+                // Set the anchor of the spring joint to the hit point relative to the clicked object's position
+                springJoint.anchor = hit.point - (Vector2)clickedFirst.transform.position;
+                ropePositions.Add(newAnchorPoint.transform);
+
+                // Check if they clicked before allowing them to click again
                 clickedAnchored = true;
                 StartCoroutine(ClickCooldown());
             }
@@ -59,6 +73,7 @@ public class RopeConnect : MonoBehaviour
         }
 
     }
+
 
     void Click2()
     {
@@ -76,14 +91,14 @@ public class RopeConnect : MonoBehaviour
                 {
                     springJoint.connectedBody = hit2.collider.gameObject.GetComponent<Rigidbody2D>();
                     var newAnchorPoint = Instantiate(ropeAnchorPoint, hit2.transform);
-                    ropeAnchorPoint.transform.position = springJoint.connectedBody.transform.TransformPoint(springJoint.connectedAnchor);
+                    newAnchorPoint.transform.position = springJoint.connectedBody.transform.TransformPoint(springJoint.connectedAnchor);
                     ropeEndPositions.Add(newAnchorPoint.transform);
                 }
                 else
                 {
                     springJoint.connectedAnchor = hit2.point;
                     var newAnchorPoint = Instantiate(ropeAnchorPoint, hit2.transform);
-                    ropeAnchorPoint.transform.position = transform.TransformPoint(springJoint.connectedAnchor);
+                    newAnchorPoint.transform.position = transform.TransformPoint(springJoint.connectedAnchor);
                     ropeEndPositions.Add(newAnchorPoint.transform);
                 }
               
@@ -111,6 +126,9 @@ public class RopeConnect : MonoBehaviour
             {
                 if (ropes[i] != null && ropePositions[i] != null && ropeEndPositions[i] != null)
                 {
+
+
+
                     Debug.Log("Log");
                     ropes[i].SetPosition(0, ropePositions[i].position);
                     ropes[i].SetPosition(1, ropeEndPositions[i].position);

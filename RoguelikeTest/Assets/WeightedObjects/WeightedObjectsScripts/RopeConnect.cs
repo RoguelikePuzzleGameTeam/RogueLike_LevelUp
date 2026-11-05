@@ -53,11 +53,8 @@ public class RopeConnect : MonoBehaviour
         CheckClick();
         Click2();
         UpdateTethers();
-
-        double distance = Vector2.Distance(distanceJoint.transform.TransformPoint(distanceJoint.anchor), distanceJoint.connectedAnchor);
-
-        Debug.Log("Distance: " + distance);
-
+        DistanceCheck();
+       
     }
 
     /* CLICK DETECTION
@@ -75,24 +72,24 @@ public class RopeConnect : MonoBehaviour
                 clickedFirst = hit.collider.gameObject;
                 distanceJoint = clickedFirst.AddComponent<DistanceJoint2D>();
 
-                // create a spring joint to the clicked object to allow the object to get pulled in with more fluid physics
-                springJoint = clickedFirst.AddComponent<SpringJoint2D>();
-
-                // disable both joints until the second click is made
-                distanceJoint.enabled = false;
-                springJoint.enabled = false;
-
                 //Configure the distance joint settings
                 distanceJoint.autoConfigureDistance = autoConfigureDistance;
                 distanceJoint.enableCollision = true;
                 distanceJoint.distance = distance;
                 distanceJoint.maxDistanceOnly = maxDistanceOnly;
 
+                // create a spring joint to the clicked object to allow the object to get pulled in with more fluid physics
+                springJoint = clickedFirst.AddComponent<SpringJoint2D>();
+
+                // disable both joints until the second click is made
+                distanceJoint.enabled = false;
+                springJoint.enabled = false;
+                springJoint.frequency = frequency;
 
                 //Create the line
                 line = Instantiate(line, clickedFirst.transform);
                 line.useWorldSpace = true;
-                ropes.Add(line);
+                line.enabled = false;
 
                 //create a new anchor point at the hit point and set it as the anchor for the spring joint
                 var newAnchorPoint = Instantiate(ropeAnchorPoint);
@@ -127,6 +124,9 @@ public class RopeConnect : MonoBehaviour
 
             if (hit2.collider != null)
             {
+
+                ropes.Add(line);
+                line.enabled = true;
                 if (hit2.collider.gameObject.GetComponent<Rigidbody2D>() != null)
                 {
                     distanceJoint.connectedBody = hit2.collider.gameObject.GetComponent<Rigidbody2D>();
@@ -149,6 +149,22 @@ public class RopeConnect : MonoBehaviour
         }
     }
 
+    void DistanceCheck()
+    {
+        if (distanceJoint && springJoint && (distanceJoint.connectedAnchor != null || distanceJoint.connectedBody != null))
+        {
+            float distance = Vector2.Distance(distanceJoint.transform.TransformPoint(distanceJoint.anchor), distanceJoint.connectedAnchor);
+            if (distance < distanceJoint.distance)
+            {
+                distanceJoint.enabled = true;
+            } else
+            {
+                springJoint.enabled = true;
+            }
+        }
+      
+    }
+
     IEnumerator ClickCooldown()
     {
         yield return new WaitForSeconds(0.2f);
@@ -166,13 +182,11 @@ public class RopeConnect : MonoBehaviour
             {
                 if (ropes[i] != null && ropePositions[i] != null && ropeEndPositions[i] != null)
                 {
-
-
-
                     Debug.Log("Log");
                     ropes[i].SetPosition(0, ropePositions[i].position);
                     ropes[i].SetPosition(1, ropeEndPositions[i].position);
                 }
+                else continue;
             }
         }
     }

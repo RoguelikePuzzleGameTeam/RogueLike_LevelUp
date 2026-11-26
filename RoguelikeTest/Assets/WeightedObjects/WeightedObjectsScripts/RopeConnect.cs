@@ -1,6 +1,7 @@
 using NUnit.Framework;
 using System.Collections;
 using System.Collections.Generic;
+using System.Runtime.CompilerServices;
 using Unity.Mathematics;
 using UnityEngine;
 
@@ -52,7 +53,11 @@ public class RopeConnect : MonoBehaviour
     {
         CheckClick();
         Click2();
+
+        // visual
         UpdateTethers();
+
+        // physical
         DistanceCheck();
        
     }
@@ -84,6 +89,8 @@ public class RopeConnect : MonoBehaviour
                 // disable both joints until the second click is made
                 distanceJoint.enabled = false;
                 springJoint.enabled = false;
+                springJoint.autoConfigureDistance = autoConfigureDistance;
+                springJoint.enableCollision = true;
                 springJoint.frequency = frequency;
 
                 //Create the line
@@ -112,6 +119,10 @@ public class RopeConnect : MonoBehaviour
     }
 
 
+    /**
+     * 
+     * 
+     */
     void Click2()
     {
 
@@ -149,16 +160,23 @@ public class RopeConnect : MonoBehaviour
         }
     }
 
+    /** This method checks the distance ad enables joints depending on what it is
+     * 
+     * 
+     */
     void DistanceCheck()
     {
         if (distanceJoint && springJoint && (distanceJoint.connectedAnchor != null || distanceJoint.connectedBody != null))
         {
             float distance = Vector2.Distance(distanceJoint.transform.TransformPoint(distanceJoint.anchor), distanceJoint.connectedAnchor);
-            if (distance < distanceJoint.distance)
+            Debug.Log(distance + ", " + distanceJoint.distance);
+            if (distance < distanceJoint.distance - 0.5)
             {
                 distanceJoint.enabled = true;
+                springJoint.enabled = false;
             } else
             {
+                distanceJoint.enabled = false;
                 springJoint.enabled = true;
             }
         }
@@ -190,4 +208,6 @@ public class RopeConnect : MonoBehaviour
             }
         }
     }
+
 }
+
